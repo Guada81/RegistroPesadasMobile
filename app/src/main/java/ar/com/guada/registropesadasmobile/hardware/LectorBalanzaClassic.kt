@@ -7,10 +7,15 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -22,16 +27,20 @@ class LectorBalanzaClassic(
 ) : LectorHardware {
 
     companion object {
-        // UUID estándar de SPP (Serial Port Profile). Es un valor fijo,
-        // no algo que definas vos: todos los dispositivos Bluetooth Classic
-        // que actúan como "puerto serie" usan este mismo identificador.
         private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
 
     private var socket: BluetoothSocket? = null
+    private var lecturaJob: Job? = null
+
+    private val _datosRecibidos = MutableSharedFlow<String>(replay = 1)
+    override val datosRecibidos: Flow<String> = _datosRecibidos.asSharedFlow()
+
+    private val _estadoConexion = MutableStateFlow(EstadoConexion.DESCONECTADO)
+    val estadoConexion: StateFlow<EstadoConexion> = _estadoConexion.asStateFlow()
 
     @SuppressLint("MissingPermission")
-    override fun conectar(direccionMac: String) {
+    override suspend fun conectar(direccionMac: String) = withContext(Dispatchers.IO) {
         val bluetoothManager = context.getSystemService(BluetoothManager::class.java)
         val adapter = bluetoothManager?.adapter
             ?: throw IllegalStateException("Este dispositivo no tiene Bluetooth")
@@ -42,43 +51,41 @@ class LectorBalanzaClassic(
         socket = device.createRfcommSocketToServiceRecord(SPP_UUID).apply {
             connect()
         }
+
+        _estadoConexion.value = EstadoConexion.CONECTADO
+        iniciarLecturaContinua()
+    }
+
+    private fun iniciarLecturaContinua() {
+        lecturaJob?.cancel()
+
+        val activeSocket = socket ?: return
+        val reader = BufferedReader(InputStreamReader(activeSocket.inputStream))
+
+        lecturaJob = scope.launch(Dispatchers.IO) {
+            try {
+                while (true) {
+                    val linea = reader.readLine() ?: break
+                    _datosRecibidos.tryEmit(linea)
+                }
+                // readLine() devolvió null: el socket se cerró del otro lado
+                // (ej. la balanza se apagó o se fue de rango).
+                _estadoConexion.value = EstadoConexion.ERROR
+            } catch (e: IOException) {
+                // Corte imprevisto de la conexión mientras se leía.
+                _estadoConexion.value = EstadoConexion.ERROR
+            }
+        }
     }
 
     override fun desconectar() {
+        lecturaJob?.cancel()
         try {
             socket?.close()
         } catch (e: IOException) {
-            // Si ya estaba desconectado o hubo un error de bajo nivel al
-            // cerrar, no es un caso que deba tirar la app abajo.
+            // Ya estaba desconectado o hubo un error de bajo nivel al cerrar.
         }
         socket = null
-    }
-
-    override val datosRecibidos: Flow<String> = callbackFlow {
-        val activeSocket = socket
-            ?: run {
-                close()
-                return@callbackFlow
-            }
-
-        val reader = BufferedReader(InputStreamReader(activeSocket.inputStream))
-
-        // Lanzamos un loop de lectura en un hilo aparte (Dispatchers.IO,
-        // pensado para operaciones de entrada/salida que bloquean el hilo).
-        val job = scope.launch(Dispatchers.IO) {
-            try {
-                while (true) {
-                    val linea = reader.readLine() ?: break  // null = el socket se cerró
-                    trySend(linea)
-                }
-            } catch (e: IOException) {
-                close(e)  // propaga el error al Flow, para que quien lo consuma se entere
-            }
-        }
-
-        // awaitClose se ejecuta cuando quien está escuchando este Flow deja
-        // de escuchar (por ejemplo, si cambia de pantalla). Ahí cancelamos
-        // el loop de lectura para no dejar hilos corriendo de más.
-        awaitClose { job.cancel() }
+        _estadoConexion.value = EstadoConexion.DESCONECTADO
     }
 }

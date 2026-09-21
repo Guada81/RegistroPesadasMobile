@@ -10,7 +10,7 @@ class LectorCaravanaManual : LectorHardware {
     // que emitía solo. Acá el "emisor" es el usuario tocando un botón).
     private val idsSeleccionados = MutableSharedFlow<String>()
 
-    override fun conectar(direccionMac: String) {
+    override suspend fun conectar(direccionMac: String) {
         // No hay conexión real, no hacemos nada.
     }
 
