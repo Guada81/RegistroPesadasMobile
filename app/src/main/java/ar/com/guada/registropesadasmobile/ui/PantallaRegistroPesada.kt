@@ -47,6 +47,7 @@ fun PantallaRegistroPesada(
     lectorBalanza: LectorBalanzaClassic,
     estadoConexion: EstadoConexion,
     onIrAConexion: () -> Unit,
+    onCerrarSesion: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -88,22 +89,24 @@ fun PantallaRegistroPesada(
 
     val puedeGuardar = pesoActual?.estable == true && animalSeleccionado != null
 
-    Column(
-        modifier = modifier.fillMaxSize().padding(16.dp)
-    ) {
-        // --- Sección 1: Balanza ---
+    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text("1. Peso", style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = onIrAConexion) {
-                val (texto, color) = when (estadoConexion) {
-                    EstadoConexion.CONECTADO -> "🔵 Conectado" to MaterialTheme.colorScheme.primary
-                    EstadoConexion.ERROR -> "⚠ Conexión perdida" to MaterialTheme.colorScheme.error
-                    EstadoConexion.DESCONECTADO -> "⚪ Sin conectar" to MaterialTheme.colorScheme.onSurfaceVariant
+            Row {
+                TextButton(onClick = onIrAConexion) {
+                    val (texto, color) = when (estadoConexion) {
+                        EstadoConexion.CONECTADO -> "🔵 Conectado" to MaterialTheme.colorScheme.primary
+                        EstadoConexion.ERROR -> "⚠ Conexión perdida" to MaterialTheme.colorScheme.error
+                        EstadoConexion.DESCONECTADO -> "⚪ Sin conectar" to MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Text(texto, color = color)
                 }
-                Text(texto, color = color)
+                TextButton(onClick = onCerrarSesion) {
+                    Text("Salir")
+                }
             }
         }
 
