@@ -1,6 +1,7 @@
 package ar.com.guada.registropesadasmobile.sync
 
 import android.content.Context
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import ar.com.guada.registropesadasmobile.data.AppDatabase
@@ -14,6 +15,8 @@ class SyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        RetrofitCliente.inicializar(applicationContext)
+
         val pesadaDao = AppDatabase.obtenerInstancia(applicationContext).pesadaDao()
         val pesadaApi = RetrofitCliente.pesadaApi
 
@@ -39,6 +42,7 @@ class SyncWorker(
                     }
                 }
             } catch (e: IOException) {
+                Log.e("SyncWorker", "Error de red al sincronizar", e)
                 huboErrorDeRed = true
             }
         }

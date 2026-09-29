@@ -1,5 +1,8 @@
 package ar.com.guada.registropesadasmobile.red
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class PesadaCrearRequest(
     val animal: Int?,
     val caravana_desconocida: String?,
@@ -8,6 +11,7 @@ data class PesadaCrearRequest(
     val uuid_cliente: String
 )
 
+@JsonClass(generateAdapter = true)
 data class PesadaResponse(
     val id: Int,
     val animal: Int?,

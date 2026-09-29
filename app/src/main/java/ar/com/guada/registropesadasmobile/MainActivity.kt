@@ -20,6 +20,7 @@ import ar.com.guada.registropesadasmobile.red.RetrofitCliente
 import ar.com.guada.registropesadasmobile.red.SesionInfo
 import ar.com.guada.registropesadasmobile.red.SesionRepository
 import ar.com.guada.registropesadasmobile.sync.programarSyncPeriodico
+import ar.com.guada.registropesadasmobile.sync.sincronizarAhora
 import ar.com.guada.registropesadasmobile.ui.PantallaConexionBluetooth
 import ar.com.guada.registropesadasmobile.ui.PantallaLogin
 import ar.com.guada.registropesadasmobile.ui.PantallaRegistroPesada

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
@@ -26,4 +27,16 @@ fun programarSyncPeriodico(context: Context) {
         androidx.work.ExistingPeriodicWorkPolicy.KEEP,
         request
     )
+}
+// Creado para forzar ejecución inmediata en pruebas
+fun sincronizarAhora(context: Context) {
+    val constraints = Constraints.Builder()
+        .setRequiredNetworkType(NetworkType.CONNECTED)
+        .build()
+
+    val request = OneTimeWorkRequestBuilder<SyncWorker>()
+        .setConstraints(constraints)
+        .build()
+
+    WorkManager.getInstance(context).enqueue(request)
 }
