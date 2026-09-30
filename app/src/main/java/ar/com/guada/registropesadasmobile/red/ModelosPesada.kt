@@ -8,7 +8,8 @@ data class PesadaCrearRequest(
     val caravana_desconocida: String?,
     val peso: Double,
     val unidad_medida: String,
-    val uuid_cliente: String
+    val uuid_cliente: String,
+    val fecha_hora: String
 )
 
 @JsonClass(generateAdapter = true)

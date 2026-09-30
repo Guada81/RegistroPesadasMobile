@@ -32,6 +32,7 @@ class SyncWorker(
                         pesadaDao.actualizar(pesada.copy(estadoSync = EstadoSync.SINCRONIZADO))
                     }
                     response.code() == 401 -> {
+                        RetrofitCliente.obtenerSesionRepository().cerrarSesion()
                         return Result.failure()
                     }
                     response.code() in 400..499 -> {
@@ -39,11 +40,13 @@ class SyncWorker(
                     }
                     else -> {
                         huboErrorDeRed = true
+                        break
                     }
                 }
             } catch (e: IOException) {
                 Log.e("SyncWorker", "Error de red al sincronizar", e)
                 huboErrorDeRed = true
+                break
             }
         }
 

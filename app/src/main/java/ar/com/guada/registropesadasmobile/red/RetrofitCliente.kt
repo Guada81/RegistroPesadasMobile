@@ -35,4 +35,6 @@ object RetrofitCliente {
 
     val authApi: AuthApi by lazy { retrofit.create(AuthApi::class.java) }
     val pesadaApi: PesadaApi by lazy { retrofit.create(PesadaApi::class.java) }
+
+    fun obtenerSesionRepository(): SesionRepository = sesionRepository
 }
