@@ -26,7 +26,9 @@ import ar.com.guada.registropesadasmobile.ui.PantallaLogin
 import ar.com.guada.registropesadasmobile.ui.PantallaRegistroPesada
 import ar.com.guada.registropesadasmobile.ui.theme.RegistroPesadasMobileTheme
 import kotlinx.coroutines.launch
-
+import ar.com.guada.registropesadasmobile.data.AnimalRepository
+import ar.com.guada.registropesadasmobile.data.AppDatabase
+import ar.com.guada.registropesadasmobile.data.ResultadoSyncAnimales
 enum class Pantalla {
     PRINCIPAL,
     CONEXION_BLUETOOTH
@@ -43,6 +45,13 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 val scope = rememberCoroutineScope()
                 val sesionRepository = remember { SesionRepository(context) }
+                val animalRepository = remember {
+                    AnimalRepository(
+                        AppDatabase.obtenerInstancia(context).animalDao(),
+                        RetrofitCliente.animalApi,
+                        RetrofitCliente.obtenerSesionRepository()
+                    )
+                }
 
                 // null = "todavía no sabemos" (cargando desde DataStore).
                 // Una vez que DataStore responde la primera vez, pasa a
@@ -62,6 +71,25 @@ class MainActivity : ComponentActivity() {
                 val estadoConexion by lectorBalanza.estadoConexion.collectAsState()
                 var pantallaActual by remember { mutableStateOf(Pantalla.PRINCIPAL) }
                 val snackbarHostState = remember { SnackbarHostState() }
+                var actualizandoAnimales by remember { mutableStateOf(false) }
+                val sincronizarAnimales: () -> Unit = {
+                    if (!actualizandoAnimales) {
+                        scope.launch {
+                            actualizandoAnimales = true
+                            val resultado = animalRepository.sincronizar()
+                            actualizandoAnimales = false
+                            when (resultado) {
+                                ResultadoSyncAnimales.OK ->
+                                    snackbarHostState.showSnackbar("Animales actualizados")
+                                ResultadoSyncAnimales.SIN_CONEXION ->
+                                    snackbarHostState.showSnackbar("Sin conexión: no se pudo actualizar la lista de animales")
+                                ResultadoSyncAnimales.ERROR_SERVIDOR ->
+                                    snackbarHostState.showSnackbar("Error del servidor al actualizar animales")
+                                ResultadoSyncAnimales.SESION_EXPIRADA -> { }
+                            }
+                        }
+                    }
+                }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -80,7 +108,7 @@ class MainActivity : ComponentActivity() {
                         }
                         sesion == null -> {
                             PantallaLogin(
-                                onLoginExitoso = { /* no hace falta nada: el LaunchedEffect de arriba detecta el cambio solo */ },
+                                onLoginExitoso = { sincronizarAnimales() },
                                 modifier = Modifier.padding(innerPadding)
                             )
                         }
@@ -93,6 +121,8 @@ class MainActivity : ComponentActivity() {
                                     onCerrarSesion = {
                                         scope.launch { sesionRepository.cerrarSesion() }
                                     },
+                                    onActualizarAnimales = sincronizarAnimales,
+                                    actualizandoAnimales = actualizandoAnimales,
                                     snackbarHostState = snackbarHostState,
                                     modifier = Modifier.padding(innerPadding)
                                 )

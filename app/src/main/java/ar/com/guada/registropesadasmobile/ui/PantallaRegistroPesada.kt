@@ -48,6 +48,8 @@ fun PantallaRegistroPesada(
     estadoConexion: EstadoConexion,
     onIrAConexion: () -> Unit,
     onCerrarSesion: () -> Unit,
+    onActualizarAnimales: () -> Unit,
+    actualizandoAnimales: Boolean,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -131,6 +133,13 @@ fun PantallaRegistroPesada(
         Text("2. Animal", style = MaterialTheme.typography.titleMedium)
         Button(onClick = { mostrarSelectorAnimal = true }) {
             Text(animalSeleccionado?.let { "Caravana: ${it.caravana}" } ?: "Elegir animal")
+        }
+
+        TextButton(
+            onClick = onActualizarAnimales,
+            enabled = !actualizandoAnimales
+        ) {
+            Text(if (actualizandoAnimales) "Actualizando..." else "Actualizar animales")
         }
 
         if (mostrarSelectorAnimal) {

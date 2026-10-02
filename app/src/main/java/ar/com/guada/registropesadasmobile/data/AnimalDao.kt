@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AnimalDao {
 
-    @Query("SELECT * FROM animales ORDER BY caravana ASC")
+    @Query("SELECT * FROM animales WHERE activo = 1 ORDER BY caravana ASC")
     fun obtenerTodos(): Flow<List<AnimalLocal>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

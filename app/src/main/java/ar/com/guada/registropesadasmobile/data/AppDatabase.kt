@@ -4,12 +4,10 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
-@Database(entities = [AnimalLocal::class, PesadaLocal::class], version = 1)
+@Database(entities = [AnimalLocal::class, PesadaLocal::class], version = 2)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun animalDao(): AnimalDao
@@ -19,6 +17,14 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        // Migración nueva, dentro del companion object
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE animales ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE animales ADD COLUMN sexo TEXT")
+            }
+        }
+
         fun obtenerInstancia(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instancia = Room.databaseBuilder(
@@ -26,32 +32,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "registro_pesadas_db"
                 )
-                    .addCallback(object : RoomDatabase.Callback() {
-                        // onCreate se dispara UNA SOLA VEZ: la primera vez
-                        // que el archivo de la base de datos se crea en el
-                        // celular. Si ya existe (por ejemplo, cerraste y
-                        // volviste a abrir la app), no se vuelve a llamar.
-                        // Por eso es un buen lugar para cargar datos
-                        // iniciales, sin riesgo de duplicarlos.
-                        override fun onCreate(db: SupportSQLiteDatabase) {
-                            super.onCreate(db)
-                            CoroutineScope(Dispatchers.IO).launch {
-                                INSTANCE?.animalDao()?.insertarTodos(animalesDePrueba())
-                            }
-                        }
-                    })
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                 INSTANCE = instancia
                 instancia
             }
         }
-
-        private fun animalesDePrueba(): List<AnimalLocal> = listOf(
-            AnimalLocal(id = 1, caravana = "AR001234"),
-            AnimalLocal(id = 2, caravana = "AR001235"),
-            AnimalLocal(id = 3, caravana = "AR001236"),
-            AnimalLocal(id = 4, caravana = "AR001237"),
-            AnimalLocal(id = 5, caravana = "AR001238")
-        )
     }
 }
