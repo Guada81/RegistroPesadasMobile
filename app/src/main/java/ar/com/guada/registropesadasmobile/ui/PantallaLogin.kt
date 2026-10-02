@@ -74,7 +74,7 @@ fun PantallaLogin(
                     } catch (e: HttpException) {
                         mensajeError = when (e.code()) {
                             403 -> "Tu usuario no tiene acceso a la app móvil."
-                            401 -> "Usuario o contraseña incorrectos."
+                            400, 401 -> "Usuario o contraseña incorrectos."
                             else -> "Error del servidor (${e.code()})."
                         }
                     } catch (e: Exception) {
